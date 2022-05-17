@@ -176,6 +176,8 @@ const updateData = async (req, res) => {
 const deleteData = async (req, res) => {
   try {
     infoLogger.info(req.query);
+    const id = req.query.id;
+    if (!id) throw new Error("please pass id");
     const data = await models.User.destroy({
       where: {
         id: req.query.id,
