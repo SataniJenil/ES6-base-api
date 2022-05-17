@@ -8,14 +8,15 @@ const findUser = async (req, res) => {
     infoLogger.info(req.params);
     console.log("data", data);
     const data = await models.User.findAll({
-      include: [
-        {
-          model: models.todo,
-          as: "user",
-          // attributes: ["email"],
-        },
-      ],
-      // attributes: [[Sequelize.col("user.username"), "name"]],
+      include: {
+        model: models.todo,
+        as: "user",
+        attributes: [],
+      },
+      attributes: {
+        include: [[Sequelize.fn("COUNT", Sequelize.col("user.id")), "total"]],
+      },
+      group: ["User.id"],
     });
     if (!data) throw new Error("id is not found");
     else
