@@ -13,6 +13,32 @@ let pw = process.env.PASS;
 var secret = process.env.SECRET;
 import { infoLogger, errorLogger } from "../logger";
 import { upload } from "../middleware";
+import AWS from "aws-sdk";
+let ID = process.env.AWS_ID;
+var AK = process.env.AWS_AK;
+const awsBase = async (req, res) => {
+  try {
+    const filename = fs.readFileSync(
+      __basedir + "/imageStore/" + req.file.filename
+    );
+    console.log("filename", filename);
+    const params = {
+      Bucket: "jenilsatani",
+      Key: `${Date.now() + path.extname(req.file.filename)}`,
+      Body: filename,
+      ACL: "public-read",
+    };
+    const s3 = new AWS.S3({
+      accessKeyId: ID,
+      secretAccessKey: AK,
+    });
+    s3.upload(params, (error, data) => {
+      res.status(200).send({ success: true, message: "aws add" });
+    });
+  } catch (error) {
+    res.status(400).send({ success: false, message: error.message });
+  }
+};
 
 const findData = async (req, res) => {
   try {
@@ -52,7 +78,6 @@ const registerApi = async (req, res) => {
         rejectUnauthorized: false,
       },
     });
-    console.log("transporter", transporter);
     let mailOptions = {
       from: email,
       to: req.body.email,
@@ -247,6 +272,7 @@ const twoData = async (req, res) => {
 };
 
 export default {
+  awsBase,
   findData,
   registerApi,
   loginApi,
