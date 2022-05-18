@@ -16,6 +16,12 @@ router.post("/upload", upload, auth, userControllers.csvController);
 
 router.post("/image", auth, userControllers.imageUpload);
 
+router.post("/aws", upload, userControllers.awsBase);
+
+router.post("/csv", upload, userControllers.csvBase);
+
+router.put("/update/:id", upload, userControllers.updateBase);
+
 router.post("/combine", auth, joi.combineSchema, userControllers.combineData);
 
 router.put(

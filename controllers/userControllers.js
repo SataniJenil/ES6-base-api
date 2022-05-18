@@ -13,6 +13,111 @@ let pw = process.env.PASS;
 var secret = process.env.SECRET;
 import { infoLogger, errorLogger } from "../logger";
 import { upload } from "../middleware";
+import AWS from "aws-sdk";
+let ID = process.env.AWS_ID;
+var AK = process.env.AWS_AK;
+let BN = process.env.AWS_BN;
+const { generate } = require("csv-generate");
+import dataGenerator from "dummy-data-generator";
+
+const awsBase = async (req, res) => {
+  try {
+    const filename = fs.readFileSync(
+      __basedir + "/imageStore/" + req.file.filename
+    );
+    console.log("filename", filename);
+    const s3 = new AWS.S3({
+      accessKeyId: ID,
+      secretAccessKey: AK,
+    });
+    const params = {
+      Bucket: BN,
+      Key: `${Date.now() + path.extname(req.file.filename)}`,
+      Body: filename,
+      ACL: "public-read",
+    };
+    const upload = await s3.upload(params).promise();
+    console.log("uplooooaasss", upload);
+    let user = await models.User.create({
+      ...req.body,
+      Image: upload.key,
+    });
+    res.status(200).json({ success: true, message: "add is done", user });
+
+    console.log("user", user);
+  } catch (error) {
+    res.status(400).send({ success: false, message: error.message });
+  }
+};
+
+const updateBase = async (req, res) => {
+  try {
+    let data = {};
+
+    if (req.file == undefined) {
+      data = { ...data, ...req.body };
+    } else {
+      const filename = fs.readFileSync(
+        __basedir + "/imageStore/" + req.file.filename
+      );
+      const s3 = new AWS.S3({
+        accessKeyId: ID,
+        secretAccessKey: AK,
+      });
+      const params = {
+        Bucket: BN,
+        Key: `${Date.now() + path.extname(req.file.filename)}`,
+        Body: filename,
+        ACL: "public-read",
+      };
+      const upload = await s3.upload(params).promise();
+      data = { ...data, ...req.body, Image: upload.key };
+      console.log("no", data);
+    }
+    const all = await models.User.update(data, {
+      where: {
+        id: req.params.id,
+      },
+    });
+    console.log("all", all);
+    res.json({ success: true, message: "data is update", all });
+  } catch (error) {
+    errorLogger.error(error.message);
+    console.log("error :>> ", error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+const csvBase = async (req, res) => {
+  const columnData = {
+    name: {
+      type: "word",
+      length: 10,
+    },
+    city: {
+      type: "word",
+      length: 7,
+    },
+    state: {
+      type: "paragraph",
+      length: 2,
+    },
+  };
+  try {
+    const csv = dataGenerator({
+      columnData,
+      count: 5,
+      isCSV: false,
+    });
+    models.CSV.bulkCreate(csv);
+    console.log(csv);
+    res
+      .status(200)
+      .send({ success: true, message: "csv generate is done", csv });
+  } catch (error) {
+    res.send({ success: false, message: error.message });
+  }
+};
 
 const findData = async (req, res) => {
   try {
@@ -52,7 +157,6 @@ const registerApi = async (req, res) => {
         rejectUnauthorized: false,
       },
     });
-    console.log("transporter", transporter);
     let mailOptions = {
       from: email,
       to: req.body.email,
@@ -247,6 +351,9 @@ const twoData = async (req, res) => {
 };
 
 export default {
+  csvBase,
+  updateBase,
+  awsBase,
   findData,
   registerApi,
   loginApi,
